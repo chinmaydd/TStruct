@@ -5,3 +5,4 @@
 *.o
 *.cmd
 *.d
+.tmp_versions/
