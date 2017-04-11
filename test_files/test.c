@@ -1,11 +1,13 @@
 #include <stdio.h>
+#include <unistd.h>
 
 int main() {
   printf("Hello, world!");
   int i = 0;
-  while(i < 1000) {
-    printf("ayy lmao");
-    i = i + 1;
+  for (i = 0; i < 5; i++) {
+    sleep(1);
+    printf("WTF");
   }
+
   return 0;
 }
