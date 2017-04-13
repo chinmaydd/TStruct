@@ -9,13 +9,26 @@
 #include <linux/buffer_head.h>
 #include <linux/string.h>
 #include <linux/delay.h>
+#include <linux/moduleparam.h>
+#include <linux/stat.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("chinmay_dd");
-MODULE_DESCRIPTION("Something cool");
+MODULE_DESCRIPTION("Collect task_struct data for processes in the linux kernel for fun and research");
+
+static char *DATA_PATH = "/home/krypt0/MalwareAnalysis/data/0000.txt";
+static char *ELF_PATH = "/home/krypt0/MalwareAnalysis/elfs/0000";
+static char *PROC_NAME = "0000";
+
+module_param(DATA_PATH, charp, 0);
+module_param(ELF_PATH, charp, 0);
+module_param(PROC_NAME, charp, 0);
+
+MODULE_PARM_DESC(DATA_PATH, "Used to provide file path for data to be written into it");
+MODULE_PARM_DESC(ELF_PATH, "Used to provide file path for the elf to be tested");
+MODULE_PARM_DESC(PROC_NAME, "USed to provide the process name which needs to be tracked.");
 
 struct task_struct *g, *p;
-const char *DATA_PATH = "/home/chinmay_dd/Projects/malware/data.txt";
 
 // Opening a file
 struct file* file_open(const char* path, int flags, int rights) {
@@ -75,26 +88,29 @@ int file_sync(struct file* file) {
 
 static int __init hello_init(void)
 {
-    char userprog[] = "/home/chinmay_dd/Projects/malware/test_files/test2";
-    char *argv[] = {userprog, NULL};
+    // char userprog[] = "/home/krypt0/MalwareAnalysis/elfs/0000";
+    char *argv[] = {ELF_PATH, NULL};
     char *envp[] = {"HOME=/", "TERM=linux", "PATH=/sbin:/usr/sbin/:/bin:/usr/bin", NULL};
 
-    int ret = call_usermodehelper(argv[0], argv, envp, UMH_NO_WAIT);
+    int ret = call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
 
     // MAKE WAY FOR SOME NEXT LEVEL MAGIC
     // 1337 HAXXXXX
     msleep(1);
     // 1337 HAXXXXX
     
+    struct file *data = file_open (DATA_PATH, O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    
     if (ret!=0) {
       printk("Error in helper.\n");
+      return 0;
     } else {
       printk("It's all coming together.\n");
     }
 
     for_each_process(p) {
-      if (strcmp(p->comm, "test2") == 0) {
-        struct file *data = file_open(DATA_PATH, O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+      if (strcmp(p->comm, PROC_NAME) == 0) {
+        // printk(KERN_INFO "FOUND IT");
         // Collect data for the particular process.
         // fpu_counter was removed from task_struct since it was arch-specific
         // Dont know what to do with this
@@ -114,15 +130,19 @@ static int __init hello_init(void)
         // char alloc_lock[8];
         // char count[8];
         int i = 0; 
-        int pos = 0;
-        
-        while (i < 500) {
-          msleep(1);
+        long int pos = 0;
+
+        while (i < 1000) {
+          if (!(pid_alive (p))) {
+              break;
+          }
+
           i += 1;
+
+          if (p->active_mm == NULL) {
+              return 0;
+          }
         
-          // file_write (data, pos, p->comm, sizeof (p->comm));
-          // pos += sizeof (p->comm);
-          
           snprintf (map_count, sizeof (map_count), "%d,", p->active_mm->map_count);
           file_write (data, pos, map_count, sizeof (map_count));
           pos = pos + 1 + sizeof (map_count);
@@ -179,6 +199,7 @@ static int __init hello_init(void)
         }
       }
     }
+    file_close (data);
     return 0;    // Non-zero return means that the module couldn't be loaded.
 }
 
