@@ -110,11 +110,9 @@ static int __init hello_init(void)
 
     for_each_process(p) {
       if (strcmp(p->comm, PROC_NAME) == 0) {
-        // printk(KERN_INFO "FOUND IT");
         // Collect data for the particular process.
         // fpu_counter was removed from task_struct since it was arch-specific
-        // Dont know what to do with this
-        // char page_table_lock[8];
+        // Dont know what to do with this: page_table_lock
         char map_count[8] = "";
         char hiwater_rss[8] = "";
         char hiwater_vm[8] = "";
@@ -122,17 +120,17 @@ static int __init hello_init(void)
         char exec_vm[8] = "";
         char shared_vm[8] = "";
         char nr_ptes[8] = "";
-        char utime[8] = "";
-        char stime[8] = "";
-        char nvcsw[8] = "";
-        char nivcsw[8] = "";
-        char min_flt[8] = "";
-        // char alloc_lock[8];
-        // char count[8];
-        int i = 0; 
+        char utime[16] = "";
+        char stime[16] = "";
+        char nvcsw[16] = "";
+        char nivcsw[16] = "";
+        char min_flt[16] = "";
+        long int i = 0; 
         long int pos = 0;
 
-        while (i < 1000) {
+        while (i < 10000) {
+          msleep(1);
+
           if (!(pid_alive (p))) {
               break;
           }
@@ -140,7 +138,7 @@ static int __init hello_init(void)
           i += 1;
 
           if (p->active_mm == NULL) {
-              return 0;
+              break;
           }
         
           snprintf (map_count, sizeof (map_count), "%d,", p->active_mm->map_count);
@@ -171,11 +169,11 @@ static int __init hello_init(void)
           file_write (data, pos, nr_ptes, sizeof (nr_ptes));
           pos = pos + 1 + sizeof (nr_ptes);
 
-          snprintf (utime, sizeof (utime), "%ld,", (long)p->utime);
+          snprintf (utime, sizeof (utime), "%ld,", ((long)p->utime/100));
           file_write (data, pos, utime, sizeof (utime));
           pos = pos + 1 + sizeof (utime);
 
-          snprintf (stime, sizeof (stime), "%ld,", (long)p->stime);
+          snprintf (stime, sizeof (stime), "%ld,", ((long)p->stime/100));
           file_write (data, pos, stime, sizeof (stime));
           pos = pos + 1 + sizeof (stime);
           
@@ -190,12 +188,6 @@ static int __init hello_init(void)
           snprintf (min_flt, sizeof (min_flt), "%ld\n", (long)p->min_flt);
           file_write (data, pos, min_flt, sizeof (min_flt));
           pos = pos + 1 + sizeof (min_flt);
-
-          // snprintf (alloc_lock, sizeof (alloc_lock), "%ld", (long)p->alloc_lock.x);
-          // file_write (data, 0, alloc_lock, sizeof (alloc_lock));
-          
-          // snprintf (count, sizeof(count), "%ld,", (long)p->fs->users);
-          // file_write (data, 0, count, sizeof (count)); 
         }
       }
     }
